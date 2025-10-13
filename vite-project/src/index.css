@@ -1,0 +1,4 @@
+/* Custom styles for fine-tuning */
+.carousel-image {
+  transition: opacity 1s ease-in-out;
+}
