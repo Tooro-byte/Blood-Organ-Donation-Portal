@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 function Signup() {
   const navigate = useNavigate();
-  const { setToken, setRole } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setSelectedRole] = useState("donor");
@@ -29,10 +29,15 @@ function Signup() {
         payload
       );
       if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("role", res.data.role);
-        setToken(res.data.token);
-        setRole(res.data.role);
+        login({
+          token: res.data.token,
+          role: res.data.role,
+          fullName,
+          email,
+          telephone: role === "donor" ? telephone : undefined,
+          address: role === "donor" ? address : undefined,
+          bloodGroup: role === "donor" ? bloodGroup : undefined,
+        });
         navigate(
           res.data.role === "admin" ? "/admin-dashboard" : "/donor-dashboard"
         );
@@ -51,7 +56,7 @@ function Signup() {
   return (
     <div
       className="min-h-screen bg-cover bg-center"
-      style={{ backgroundImage: "url(/images/donation-bg.jpg)" }}
+      style={{ backgroundImage: "url(/images/hospital.jpg)" }}
     >
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-500/50 via-red-500/30 to-transparent">
         <motion.div
@@ -62,7 +67,7 @@ function Signup() {
         >
           <div className="flex items-center mb-6">
             <img
-              src="/logo.png"
+              src="/images/logo.jpg"
               alt="LifeStream Logo"
               className="h-12 w-12 mr-3"
             />

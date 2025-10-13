@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 function Login() {
   const navigate = useNavigate();
-  const { setToken, setRole } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -20,8 +20,13 @@ function Login() {
       if (res.data.token) {
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("role", res.data.role);
-        setToken(res.data.token);
-        setRole(res.data.role);
+        login({
+          token: res.data.token,
+          role: res.data.role,
+          // Assuming fullName might not be returned; use existing localStorage if available
+          fullName: localStorage.getItem("fullName") || res.data.fullName || "",
+          email: res.data.email || "",
+        });
         navigate(
           res.data.role === "admin" ? "/admin-dashboard" : "/donor-dashboard"
         );
@@ -55,7 +60,7 @@ function Login() {
               alt="LifeStream Logo"
               className="h-12 w-12 mr-3"
             />
-            <h1 className="text-3xl font-bold text-orange-600">
+            <h1 className="text-3xl font-bold text-blue-600">
               LifeStream Login
             </h1>
           </div>
