@@ -8,7 +8,7 @@ function ProtectedRoute({ children, allowedRole }) {
 
   useEffect(() => {
     // Simulate a brief check to avoid flash
-    const timer = setTimeout(() => setIsLoading(false), 100);
+    const timer= setTimeout(() => setIsLoading(false), 100);
     return () => clearTimeout(timer);
   }, []);
 

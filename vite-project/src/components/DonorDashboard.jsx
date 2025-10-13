@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Backend API URL constant
+// Backend API URL constants
 const API_BASE_URL = "http://localhost:3000/api/donations";
+const API_USER_DONATIONS_URL = "http://localhost:3000/api/user/donations";
 const AUTH_TOKEN = localStorage.getItem("token");
 
-// --- Custom Feedback Message Component (Replaces alert()) ---
+// --- Custom Feedback Message Component ---
 const FeedbackMessage = ({ message, isError, onClose }) => (
   <AnimatePresence>
     {message && (
@@ -25,7 +26,7 @@ const FeedbackMessage = ({ message, isError, onClose }) => (
           onClick={onClose}
           className="absolute top-1 right-2 text-xl font-bold opacity-75 hover:opacity-100"
         >
-          &times;
+          ×
         </button>
       </motion.div>
     )}
@@ -36,9 +37,9 @@ function DonorDashboard() {
   const navigate = useNavigate();
   const [donations, setDonations] = useState([]);
 
-  // States for user profile data (pulled from localStorage)
+  // States for user profile data
   const [userInfo] = useState({
-    fullName: localStorage.getItem("fullName") || "Donor", // Fallback to "Donor" if null
+    fullName: localStorage.getItem("fullName") || "Donor",
     email: localStorage.getItem("email") || "",
     contact: localStorage.getItem("telephone") || "",
     address: localStorage.getItem("address") || "",
@@ -72,7 +73,7 @@ function DonorDashboard() {
       return;
     }
     try {
-      const res = await axios.get(API_BASE_URL, {
+      const res = await axios.get(API_USER_DONATIONS_URL, {
         headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
       });
       setDonations(res.data);
@@ -106,11 +107,6 @@ function DonorDashboard() {
         {
           type: donationType,
           details,
-          fullName: userInfo.fullName,
-          email: userInfo.email,
-          contact: userInfo.contact,
-          address: userInfo.address,
-          bloodGroup: userInfo.bloodGroup,
           preferredDate,
           hospital,
           time,
@@ -295,10 +291,15 @@ function DonorDashboard() {
                 Approved Donations
               </p>
               <p className="text-2xl font-bold text-green-600">
-                {
-                  filteredDonations.filter((d) => d.status === "approved")
-                    .length
-                }
+                {donations.filter((d) => d.status === "approved").length}
+              </p>
+            </div>
+            <div className="flex-1 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500 shadow-sm">
+              <p className="text-sm font-medium text-gray-500">
+                Pending Requests
+              </p>
+              <p className="text-2xl font-bold text-blue-600">
+                {donations.filter((d) => d.status === "pending").length}
               </p>
             </div>
           </div>
@@ -358,6 +359,7 @@ function DonorDashboard() {
                 >
                   <option value="blood">Blood</option>
                   <option value="organ">Organ</option>
+                  <option value="other">Others</option>
                 </select>
               </div>
 
@@ -483,6 +485,12 @@ function DonorDashboard() {
                       <span className="font-semibold">Location:</span>{" "}
                       {d.hospital}
                     </p>
+                    {d.details && (
+                      <p className="text-sm text-gray-500 mb-3">
+                        <span className="font-semibold">Details:</span>{" "}
+                        {d.details}
+                      </p>
+                    )}
                   </div>
 
                   {d.status === "pending" && (

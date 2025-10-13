@@ -9,31 +9,52 @@ function Login() {
   const { login } = useContext(AuthContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
     try {
       const res = await axios.post("http://localhost:3000/api/auth/login", {
         email,
         password,
       });
+
       if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("role", res.data.role);
         login({
           token: res.data.token,
           role: res.data.role,
-          // Assuming fullName might not be returned; use existing localStorage if available
-          fullName: localStorage.getItem("fullName") || res.data.fullName || "",
-          email: res.data.email || "",
+          fullName: res.data.fullName || "",
+          email: res.data.email || email,
+          telephone: res.data.telephone || "",
+          address: res.data.address || "",
+          bloodGroup: res.data.bloodGroup || "",
         });
+
+        // Navigate based on role
         navigate(
           res.data.role === "admin" ? "/admin-dashboard" : "/donor-dashboard"
         );
       }
     } catch (err) {
-      console.error(err);
-      alert("Login failed");
+      console.error("Login error:", err);
+
+      if (err.response) {
+        // Server responded with error
+        setError(err.response.data.message || "Login failed");
+      } else if (err.request) {
+        // Request made but no response
+        setError(
+          "Cannot connect to server. Please check if the server is running on port 3000."
+        );
+      } else {
+        setError("An unexpected error occurred");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -64,6 +85,13 @@ function Login() {
               LifeStream Login
             </h1>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -76,6 +104,7 @@ function Login() {
                 placeholder="Enter your email"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 required
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -89,16 +118,18 @@ function Login() {
                 placeholder="Enter your password"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 required
+                disabled={isLoading}
               />
             </div>
             <motion.button
               type="submit"
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 rounded-lg font-semibold"
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
+              whileHover={!isLoading ? "hover" : {}}
+              whileTap={!isLoading ? "tap" : {}}
+              disabled={isLoading}
             >
-              Login
+              {isLoading ? "Logging in..." : "Login"}
             </motion.button>
             <p className="text-center text-sm text-gray-600">
               Don&apos;t have an account?{" "}
