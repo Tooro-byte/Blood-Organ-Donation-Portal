@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: "http://localhost:3000",
-    methods: ["GET", "POST", "PUT"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
@@ -37,6 +37,14 @@ const Donation = sequelize.define("Donation", {
     type: DataTypes.ENUM("pending", "approved", "rejected"),
     defaultValue: "pending",
   },
+  fullName: { type: DataTypes.STRING },
+  email: { type: DataTypes.STRING },
+  contact: { type: DataTypes.STRING },
+  address: { type: DataTypes.STRING },
+  bloodGroup: { type: DataTypes.STRING },
+  preferredDate: { type: DataTypes.DATE },
+  hospital: { type: DataTypes.STRING },
+  time: { type: DataTypes.TIME },
   createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 });
 
@@ -96,16 +104,56 @@ app.post("/api/auth/signup", async (req, res) => {
 
 app.post("/api/donations", authenticate, async (req, res) => {
   console.log("Donation attempt by user:", req.user.id);
-  if (req.user.role !== "donor")
-    return res.status(403).json({ message: "Forbidden" });
-  const donation = await Donation.create({ ...req.body, userId: req.user.id });
-  res.json(donation);
+  if (req.user.role !== "donor") {
+    return res
+      .status(403)
+      .json({ message: "Forbidden: Only donors can submit donations" });
+  }
+  const {
+    type,
+    details,
+    fullName,
+    email,
+    contact,
+    address,
+    bloodGroup,
+    preferredDate,
+    hospital,
+    time,
+  } = req.body;
+  if (!type || !preferredDate || !hospital || !time) {
+    return res
+      .status(400)
+      .json({ message: "Missing required donation fields" });
+  }
+  try {
+    const donation = await Donation.create({
+      type,
+      details: details || null,
+      fullName,
+      email,
+      contact,
+      address,
+      bloodGroup,
+      preferredDate,
+      hospital,
+      time,
+      userId: req.user.id,
+    });
+    res.status(201).json(donation);
+  } catch (err) {
+    console.error("Error creating donation:", err);
+    res.status(500).json({ message: "Failed to create donation" });
+  }
 });
 
 app.get("/api/donations", authenticate, async (req, res) => {
   console.log("Donations request by user:", req.user.id);
-  if (req.user.role !== "admin")
-    return res.status(403).json({ message: "Forbidden" });
+  if (req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "Forbidden: Only admins can view all donations" });
+  }
   const donations = await Donation.findAll({
     include: [{ model: User, attributes: ["email"] }],
   });
@@ -114,12 +162,27 @@ app.get("/api/donations", authenticate, async (req, res) => {
 
 app.put("/api/donations/:id", authenticate, async (req, res) => {
   console.log("Update donation attempt for ID:", req.params.id);
-  if (req.user.role !== "admin")
-    return res.status(403).json({ message: "Forbidden" });
+  if (req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "Forbidden: Only admins can update donations" });
+  }
   const donation = await Donation.findByPk(req.params.id);
   if (!donation) return res.status(404).json({ message: "Donation not found" });
   await donation.update(req.body);
   res.json(donation);
+});
+
+app.delete("/api/donations/:id", authenticate, async (req, res) => {
+  console.log("Delete donation attempt for ID:", req.params.id);
+  const donation = await Donation.findByPk(req.params.id);
+  if (!donation || donation.userId !== req.user.id) {
+    return res
+      .status(404)
+      .json({ message: "Donation not found or unauthorized" });
+  }
+  await donation.destroy();
+  res.json({ message: "Donation cancelled successfully" });
 });
 
 app.post("/api/contact", async (req, res) => {
