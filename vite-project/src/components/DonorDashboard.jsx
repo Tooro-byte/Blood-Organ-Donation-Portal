@@ -14,6 +14,48 @@ import { motion, AnimatePresence } from "framer-motion";
 const API_BASE_URL = "http://localhost:3000/api/donations";
 const API_USER_DONATIONS_URL = "http://localhost:3000/api/user/donations";
 
+// Digital Clock Component
+const DigitalClock = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour12: true,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-purple-600 to-blue-600 text-white p-4 rounded-xl shadow-lg">
+      <div className="text-center">
+        <div className="text-2xl font-mono font-bold mb-1">
+          {formatTime(currentTime)}
+        </div>
+        <div className="text-sm opacity-90">{formatDate(currentTime)}</div>
+      </div>
+    </div>
+  );
+};
+
 // --- Custom Feedback Message Component ---
 const FeedbackMessage = ({ message, isError, onClose }) => (
   <AnimatePresence>
@@ -269,6 +311,14 @@ function DonorDashboard() {
                 </a>
               </li>
               <li>
+                <a
+                  href="/profile"
+                  className="text-gray-700 hover:text-orange-600 font-medium transition duration-150"
+                >
+                  Profile
+                </a>
+              </li>
+              <li>
                 <button
                   onClick={handleLogout}
                   className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition duration-150 shadow-md"
@@ -289,51 +339,61 @@ function DonorDashboard() {
           transition={{ duration: 0.5 }}
           className="p-6 bg-white shadow-xl rounded-xl border border-orange-100"
         >
-          <h1 className="text-3xl font-extrabold text-gray-800">
-            Welcome back,{" "}
-            <span className="text-orange-600">
-              {user?.fullName || "Valued Donor"}
-            </span>
-            !
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Thank you for being a LifeStream donor. Your willingness saves
-            lives.
-          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Welcome Section */}
+            <div className="lg:col-span-3">
+              <h1 className="text-3xl font-extrabold text-gray-800">
+                Welcome back,{" "}
+                <span className="text-orange-600">
+                  {user?.fullName || "Valued Donor"}
+                </span>
+                !
+              </h1>
+              <p className="text-gray-500 mt-1">
+                Thank you for being a LifeStream donor. Your willingness saves
+                lives.
+              </p>
 
-          <div className="flex space-x-4 mt-6">
-            <div className="flex-1 p-4 bg-orange-50 rounded-lg border-l-4 border-orange-500 shadow-sm">
-              <p className="text-sm font-medium text-gray-500">
-                Total Submissions
-              </p>
-              <p className="text-2xl font-bold text-orange-600">
-                {donations.length}
-              </p>
+              <div className="flex space-x-4 mt-6">
+                <div className="flex-1 p-4 bg-orange-50 rounded-lg border-l-4 border-orange-500 shadow-sm">
+                  <p className="text-sm font-medium text-gray-500">
+                    Total Submissions
+                  </p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {donations.length}
+                  </p>
+                </div>
+                <div className="flex-1 p-4 bg-green-50 rounded-lg border-l-4 border-green-500 shadow-sm">
+                  <p className="text-sm font-medium text-gray-500">
+                    Approved Donations
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {donations.filter((d) => d.status === "approved").length}
+                  </p>
+                </div>
+                <div className="flex-1 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                  <p className="text-sm font-medium text-gray-500">
+                    Pending Requests
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {donations.filter((d) => d.status === "pending").length}
+                  </p>
+                </div>
+              </div>
+
+              <a
+                href="/profile"
+                className="mt-4 inline-block text-orange-600 px-4 py-1 rounded-full text-sm font-semibold hover:bg-orange-100 transition duration-150"
+              >
+                View & Update Profile
+              </a>
             </div>
-            <div className="flex-1 p-4 bg-green-50 rounded-lg border-l-4 border-green-500 shadow-sm">
-              <p className="text-sm font-medium text-gray-500">
-                Approved Donations
-              </p>
-              <p className="text-2xl font-bold text-green-600">
-                {donations.filter((d) => d.status === "approved").length}
-              </p>
-            </div>
-            <div className="flex-1 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500 shadow-sm">
-              <p className="text-sm font-medium text-gray-500">
-                Pending Requests
-              </p>
-              <p className="text-2xl font-bold text-blue-600">
-                {donations.filter((d) => d.status === "pending").length}
-              </p>
+
+            {/* Digital Clock */}
+            <div className="lg:col-span-1">
+              <DigitalClock />
             </div>
           </div>
-
-          <a
-            href="/profile"
-            className="mt-4 inline-block text-orange-600 px-4 py-1 rounded-full text-sm font-semibold hover:bg-orange-100 transition duration-150"
-          >
-            View & Update Profile
-          </a>
         </motion.div>
 
         {/* Donation Form Section */}

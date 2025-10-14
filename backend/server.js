@@ -149,6 +149,127 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
+// ==================== USER MANAGEMENT ENDPOINTS (ADMIN ONLY) ====================
+
+// Get all users (admin only)
+app.get("/api/users", authenticate, async (req, res) => {
+  try {
+    console.log("Users list request by admin:", req.user.id);
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Admin access required" });
+    }
+
+    const users = await User.findAll({
+      attributes: { exclude: ["password"] },
+      order: [["createdAt", "DESC"]],
+    });
+
+    res.json(users);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
+// Get specific user details
+app.get("/api/users/:id", authenticate, async (req, res) => {
+  try {
+    console.log("User details request for ID:", req.params.id);
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Admin access required" });
+    }
+
+    const user = await User.findByPk(req.params.id, {
+      attributes: { exclude: ["password"] },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error("Error fetching user details:", err);
+    res.status(500).json({ message: "Failed to fetch user details" });
+  }
+});
+
+// Update user role
+app.put("/api/users/:id/role", authenticate, async (req, res) => {
+  try {
+    console.log("Role update attempt for user:", req.params.id);
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Admin access required" });
+    }
+
+    const { role } = req.body;
+    if (!role || !["donor", "admin"].includes(role)) {
+      return res.status(400).json({ message: "Valid role required" });
+    }
+
+    // Prevent self-role change
+    if (req.params.id == req.user.id) {
+      return res.status(400).json({ message: "Cannot change your own role" });
+    }
+
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.update({ role });
+
+    res.json({
+      message: "User role updated successfully",
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Error updating user role:", err);
+    res.status(500).json({ message: "Failed to update user role" });
+  }
+});
+
+// Delete user
+app.delete("/api/users/:id", authenticate, async (req, res) => {
+  try {
+    console.log("User deletion attempt for ID:", req.params.id);
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Admin access required" });
+    }
+
+    // Prevent self-deletion
+    if (req.params.id == req.user.id) {
+      return res
+        .status(400)
+        .json({ message: "Cannot delete your own account" });
+    }
+
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.destroy();
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    res.status(500).json({ message: "Failed to delete user" });
+  }
+});
+
 // ==================== USER PROFILE ENDPOINTS ====================
 
 // Get current user profile
@@ -333,6 +454,24 @@ app.delete("/api/donations/:id", authenticate, async (req, res) => {
   }
 });
 
+// Get all contact messages (admin only)
+app.get("/api/contact", authenticate, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Admin access required" });
+    }
+
+    const contacts = await Contact.findAll({
+      order: [["createdAt", "DESC"]],
+    });
+    res.json({ contacts });
+  } catch (err) {
+    console.error("Error fetching contacts:", err);
+    res.status(500).json({ message: "Failed to fetch contacts" });
+  }
+});
 // ==================== CONTACT ENDPOINTS ====================
 
 app.post("/api/contact", async (req, res) => {

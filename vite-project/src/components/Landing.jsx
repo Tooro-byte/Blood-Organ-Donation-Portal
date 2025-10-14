@@ -66,14 +66,14 @@ function Landing() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       {/* Navigation Bar */}
-      <nav className="bg-orange-500 shadow-md fixed top-0 left-0 w-full z-50">
+      <nav className="bg-teal-500 shadow-md fixed top-0 left-0 w-full z-50 rounded-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0 flex items-center">
               <img
                 src="/images/logo.jpg"
                 alt="LifeStream Logo"
-                className="h-8 w-8 mr-2"
+                className="h-10 w-10 mr-2 rounded-lg"
               />
               <a href="/" className="text-2xl font-bold text-white">
                 LifeStream
