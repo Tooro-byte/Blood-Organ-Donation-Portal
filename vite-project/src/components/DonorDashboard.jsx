@@ -1,12 +1,18 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useContext,
+} from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../contexts/AuthContext";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Backend API URL constants
 const API_BASE_URL = "http://localhost:3000/api/donations";
 const API_USER_DONATIONS_URL = "http://localhost:3000/api/user/donations";
-const AUTH_TOKEN = localStorage.getItem("token");
 
 // --- Custom Feedback Message Component ---
 const FeedbackMessage = ({ message, isError, onClose }) => (
@@ -35,16 +41,9 @@ const FeedbackMessage = ({ message, isError, onClose }) => (
 
 function DonorDashboard() {
   const navigate = useNavigate();
+  const { user, token, logout } = useContext(AuthContext);
   const [donations, setDonations] = useState([]);
-
-  // States for user profile data
-  const [userInfo] = useState({
-    fullName: localStorage.getItem("fullName") || "Donor",
-    email: localStorage.getItem("email") || "",
-    contact: localStorage.getItem("telephone") || "",
-    address: localStorage.getItem("address") || "",
-    bloodGroup: localStorage.getItem("bloodGroup") || "",
-  });
+  const [loading, setLoading] = useState(true);
 
   // Donation form states
   const [donationType, setDonationType] = useState("blood");
@@ -67,24 +66,31 @@ function DonorDashboard() {
 
   // Fetch all donations for the authenticated user
   const fetchDonations = useCallback(async () => {
-    if (!AUTH_TOKEN) {
+    if (!token) {
       showFeedback("Authentication failed. Please log in again.", true);
       navigate("/login");
       return;
     }
     try {
       const res = await axios.get(API_USER_DONATIONS_URL, {
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       setDonations(res.data);
     } catch (err) {
       console.error("Error fetching donations:", err);
       showFeedback("Failed to load donation history.", true);
     }
-  }, [navigate, showFeedback]);
+  }, [token, navigate, showFeedback]);
 
+  // Load initial data
   useEffect(() => {
-    fetchDonations();
+    const loadData = async () => {
+      setLoading(true);
+      await fetchDonations();
+      setLoading(false);
+    };
+
+    loadData();
   }, [fetchDonations]);
 
   // Memoized filter logic
@@ -97,10 +103,19 @@ function DonorDashboard() {
   // Handler for submitting a new donation request
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!AUTH_TOKEN) {
+    if (!token) {
       showFeedback("Please log in to submit a donation.", true);
       return;
     }
+
+    if (!user) {
+      showFeedback(
+        "User information not loaded. Please refresh the page.",
+        true
+      );
+      return;
+    }
+
     try {
       await axios.post(
         API_BASE_URL,
@@ -111,7 +126,7 @@ function DonorDashboard() {
           hospital,
           time,
         },
-        { headers: { Authorization: `Bearer ${AUTH_TOKEN}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       await fetchDonations(); // Refresh donations after submission
       setDetails("");
@@ -134,7 +149,7 @@ function DonorDashboard() {
     }
     try {
       await axios.delete(`${API_BASE_URL}/${donationId}`, {
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       await fetchDonations(); // Refresh donations after cancellation
       showFeedback("Donation request successfully cancelled.");
@@ -161,15 +176,21 @@ function DonorDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("fullName");
-    localStorage.removeItem("email");
-    localStorage.removeItem("telephone");
-    localStorage.removeItem("address");
-    localStorage.removeItem("bloodGroup");
+    logout();
     navigate("/login");
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12 font-inter">
@@ -270,7 +291,10 @@ function DonorDashboard() {
         >
           <h1 className="text-3xl font-extrabold text-gray-800">
             Welcome back,{" "}
-            <span className="text-orange-600">{userInfo.fullName}</span>!
+            <span className="text-orange-600">
+              {user?.fullName || "Valued Donor"}
+            </span>
+            !
           </h1>
           <p className="text-gray-500 mt-1">
             Thank you for being a LifeStream donor. Your willingness saves
@@ -330,20 +354,26 @@ function DonorDashboard() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Displaying Profile Data (Read-only for context) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border">
-              <div className="p-2 border-r">
-                <p className="text-xs text-gray-500">Email:</p>
-                <p className="font-medium">{userInfo.email}</p>
+            {user && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border">
+                <div className="p-2 border-r">
+                  <p className="text-xs text-gray-500">Email:</p>
+                  <p className="font-medium">{user.email}</p>
+                </div>
+                <div className="p-2 border-r">
+                  <p className="text-xs text-gray-500">Blood Group:</p>
+                  <p className="font-medium">
+                    {user.bloodGroup || "Not specified"}
+                  </p>
+                </div>
+                <div className="p-2">
+                  <p className="text-xs text-gray-500">Contact:</p>
+                  <p className="font-medium">
+                    {user.telephone || "Not specified"}
+                  </p>
+                </div>
               </div>
-              <div className="p-2 border-r">
-                <p className="text-xs text-gray-500">Blood Group:</p>
-                <p className="font-medium">{userInfo.bloodGroup}</p>
-              </div>
-              <div className="p-2">
-                <p className="text-xs text-gray-500">Contact:</p>
-                <p className="font-medium">{userInfo.contact}</p>
-              </div>
-            </div>
+            )}
 
             {/* Donation Specific Inputs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

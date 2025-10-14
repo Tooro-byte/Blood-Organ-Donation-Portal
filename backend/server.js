@@ -70,6 +70,8 @@ sequelize
     console.error("Error syncing database:", err);
   });
 
+// ==================== AUTHENTICATION ENDPOINTS ====================
+
 app.post("/api/auth/login", async (req, res) => {
   try {
     console.log("Login attempt for:", req.body.email);
@@ -146,6 +148,66 @@ app.post("/api/auth/signup", async (req, res) => {
     res.status(500).json({ message: "Server error during signup" });
   }
 });
+
+// ==================== USER PROFILE ENDPOINTS ====================
+
+// Get current user profile
+app.get("/api/user/profile", authenticate, async (req, res) => {
+  try {
+    console.log("Profile request for user:", req.user.id);
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ["password"] }, // Don't send password
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error("Error fetching user profile:", err);
+    res.status(500).json({ message: "Failed to fetch user profile" });
+  }
+});
+
+// Update user profile
+app.put("/api/user/profile", authenticate, async (req, res) => {
+  try {
+    console.log("Profile update for user:", req.user.id);
+    const { fullName, telephone, address, bloodGroup } = req.body;
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update only allowed fields
+    await user.update({
+      fullName: fullName || user.fullName,
+      telephone: telephone || user.telephone,
+      address: address || user.address,
+      bloodGroup: bloodGroup || user.bloodGroup,
+    });
+
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        telephone: user.telephone,
+        address: user.address,
+        bloodGroup: user.bloodGroup,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Error updating user profile:", err);
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+});
+
+// ==================== DONATION ENDPOINTS ====================
 
 // Get user-specific donations
 app.get("/api/user/donations", authenticate, async (req, res) => {
@@ -271,6 +333,8 @@ app.delete("/api/donations/:id", authenticate, async (req, res) => {
   }
 });
 
+// ==================== CONTACT ENDPOINTS ====================
+
 app.post("/api/contact", async (req, res) => {
   console.log("Contact form submission received:", req.body);
   const { name, email, message } = req.body;
@@ -290,6 +354,14 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
+// ==================== UTILITY ENDPOINTS ====================
+
+app.get("/api/test", (req, res) => {
+  res.json({ message: "Backend is running!" });
+});
+
+// ==================== AUTHENTICATION MIDDLEWARE ====================
+
 function authenticate(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ message: "No token" });
@@ -301,10 +373,6 @@ function authenticate(req, res, next) {
     res.status(401).json({ message: "Invalid token" });
   }
 }
-
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Backend is running!" });
-});
 
 const PORT = 3000;
 app.listen(PORT, () => {
